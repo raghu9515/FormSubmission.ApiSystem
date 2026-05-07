@@ -1,0 +1,16 @@
+using FormSubmission.Application;
+using FormSubmission.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddApplication(); builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddControllers(); builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen();
+builder.Services.AddCors(o => o.AddPolicy("BlazorClients", p => p.WithOrigins("https://localhost:7101","http://localhost:5101","https://localhost:7201","http://localhost:5201").AllowAnyHeader().AllowAnyMethod()));
+var key = builder.Configuration["Jwt:Key"] ?? "THIS_IS_A_DEMO_SECRET_KEY_CHANGE_IN_PRODUCTION_123456";
+var issuer = builder.Configuration["Jwt:Issuer"] ?? "FormSubmission.Api"; var audience = builder.Configuration["Jwt:Audience"] ?? "FormSubmission.Clients";
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o => { o.RequireHttpsMetadata=false; o.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer=true, ValidateAudience=true, ValidateIssuerSigningKey=true, ValidateLifetime=true, ValidIssuer=issuer, ValidAudience=audience, IssuerSigningKey=new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)) }; });
+builder.Services.AddAuthorization();
+var app = builder.Build();
+app.UseMiddleware<FormSubmission.Api.Middleware.ExceptionHandlingMiddleware>();
+app.UseSwagger(); app.UseSwaggerUI(); app.UseHttpsRedirection(); app.UseCors("BlazorClients"); app.UseAuthentication(); app.UseAuthorization(); app.MapControllers(); app.Run();
